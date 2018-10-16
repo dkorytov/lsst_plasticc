@@ -221,7 +221,12 @@ def relabel(labels, data):
     return result
     
 def keras_train(location='data'):
-    data = get_processed_data(location=location)
+    # data = get_processed_data(location=location)
+    # print(data.keys())
+    # data.to_csv("data/data.csv")
+    data = pd.read_csv("data/data.csv").drop(columns=['Unnamed: 0'])
+    # print(data.keys())
+    # exit()
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
     target_names = np.sort(data['target'].unique())
 
@@ -230,11 +235,11 @@ def keras_train(location='data'):
     from keras.models import Sequential
     from keras.layers import Dense, Dropout, Flatten
     from keras.layers import Conv2D, MaxPooling2D
+    import keras.optimizers
     from keras import backend as K
-    
     batch_size = 128
     num_classes = len(target_names)
-    epochs = 12
+    epochs = 500
     
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
@@ -245,17 +250,21 @@ def keras_train(location='data'):
     odel = Sequential()
     model.add(Dense(256, activation='relu', input_shape=(40,)))
     model.add(Dropout(0.2))
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.2))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
+    learning_rate = 1.0
+    decay_rate = 0.01
+    adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+                  #optimizer=keras.optimizers.Adadelta(),
+                  optimizer=adaDelta,
                   metrics=['accuracy'])
     
-    model.fit(x_train, y_train,
+    ModelFit = model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
@@ -263,7 +272,45 @@ def keras_train(location='data'):
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
+    train_loss= ModelFit.history['loss']
+    val_loss= ModelFit.history['val_loss']
+    train_acc= ModelFit.history['acc']
+    val_acc= ModelFit.history['val_acc']
+    epoch_array = range(1, epochs+1)
 
+
+    fig, ax = plt.subplots(2,1, sharex= True, figsize = (7,5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace= 0.02)
+    ax[0].plot(epoch_array,train_loss)
+    ax[0].plot(epoch_array,val_loss)
+    ax[0].set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[0].legend(['train_loss','val_loss'])
+
+
+    ax[1].plot(epoch_array,train_acc)
+    ax[1].plot(epoch_array,val_acc)
+    ax[1].set_ylabel('acc')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[1].legend(['train_acc','val_acc'])
+
+    train_loss= ModelFit.history['loss']
+    val_loss= ModelFit.history['val_loss']
+    epoch_array = range(1, epochs+1)
+
+
+    fig, ax = plt.subplots(1,1, sharex= True, figsize = (7,5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace= 0.02)
+    ax.plot(epoch_array,train_loss)
+    ax.plot(epoch_array,val_loss)
+    ax.set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax.legend(['train_loss','val_loss'])
+
+    plt.show()
     
 def feature_selection(location='data'):
     data = get_processed_data(location=location)
