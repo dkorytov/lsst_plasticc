@@ -239,7 +239,7 @@ def keras_train(location='data'):
     from keras import backend as K
     batch_size = 128
     num_classes = len(target_names)
-    epochs = 500
+    epochs = 200
     
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
@@ -252,6 +252,13 @@ def keras_train(location='data'):
     model.add(Dropout(0.2))
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.2))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.2))
+
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
@@ -260,8 +267,8 @@ def keras_train(location='data'):
     adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  #optimizer=keras.optimizers.Adadelta(),
-                  optimizer=adaDelta,
+                  optimizer=keras.optimizers.Adadelta(),
+                  #optimizer=adaDelta,
                   metrics=['accuracy'])
     
     ModelFit = model.fit(x_train, y_train,
