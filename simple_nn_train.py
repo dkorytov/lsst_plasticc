@@ -135,10 +135,13 @@ def get_processed_data(location):
 
 def get_train_test_data(data):
     train, test = sklearn.model_selection.train_test_split(data)
-    x_train = train.drop(columns=['target', 'object_id', 'hostgal_specz'])
+    x_train = np.array(train.drop(columns=['target', 'object_id', 'hostgal_specz']))
     y_train = train['target']
-    x_test = test.drop(columns=['target', 'object_id', 'hostgal_specz'])
+    x_test = np.array(test.drop(columns=['target', 'object_id', 'hostgal_specz']))
     y_test_true = test['target']
+
+    rescale_by_column(np.vstack([x_train, x_test]))
+
     return x_train, y_train, x_test, y_test_true
 
 def simple_train(location = 'data'):
@@ -220,14 +223,34 @@ def relabel(labels, data):
         result[slct] = i
     return result
     
+def rescale_by_column(data):
+    # col_mean = np.mean(data, axis=1)
+    col_min = np.min(data, axis=1)
+    data -= col_min[:,None]
+    col_max = np.max(data, axis=1)
+    data /= col_max[:,None]
+    return data
+
+
+
+
+
 def keras_train(location='data'):
     # data = get_processed_data(location=location)
     # print(data.keys())
     # data.to_csv("data/data.csv")
     data = pd.read_csv("data/data.csv").drop(columns=['Unnamed: 0'])
-    # print(data.keys())
+    print(data.keys())
     # exit()
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
+
+    # x_train = np.array(x_train)
+    # x_test = np.array(x_test)
+
+    # x_train, x_test = rescale_by_column( np.vstack([x_train, x_test]) )
+
+
+
     target_names = np.sort(data['target'].unique())
 
     import keras
@@ -237,7 +260,7 @@ def keras_train(location='data'):
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
-    batch_size = 128
+    batch_size = 4
     num_classes = len(target_names)
     epochs = 200
     
@@ -247,23 +270,22 @@ def keras_train(location='data'):
     input_shape = np.shape(x_train)
     print(input_shape)
     model = Sequential()
-    odel = Sequential()
-    model.add(Dense(256, activation='relu', input_shape=(40,)))
+    model.add(Dense(512, activation='relu', input_shape=(input_shape[1],)))
     model.add(Dropout(0.2))
     model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.2))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.2))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.2))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.2))
+    # model.add(Dropout(0.2))
+    model.add(Dense(128, activation='relu'))
+    # model.add(Dropout(0.2))
+    model.add(Dense(64, activation='relu'))
+    # model.add(Dropout(0.2))
+    model.add(Dense(32, activation='relu'))
+    # model.add(Dropout(0.2))
 
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
-    learning_rate = 1.0
-    decay_rate = 0.01
+    learning_rate = 2.0
+    decay_rate = 0.5
     adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -274,8 +296,10 @@ def keras_train(location='data'):
     ModelFit = model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
-              verbose=1,
+              verbose=2,
               validation_data=(x_test, y_test))
+
+
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
@@ -318,6 +342,15 @@ def keras_train(location='data'):
     ax.legend(['train_loss','val_loss'])
 
     plt.show()
+
+
+
+    plt.figure(322)
+    y_test_pred = model.predict_classes(x_test)
+    cnfs_mtx = sklearn.metrics.confusion_matrix(relabel(target_names, y_test_true), y_test_pred)
+    plot_confusion_matrix(cnfs_mtx, target_names, normalize=True)
+    plt.show()
+
     
 def feature_selection(location='data'):
     data = get_processed_data(location=location)
@@ -330,7 +363,7 @@ def feature_selection(location='data'):
     print('Best features :', x_train.columns[rfecv.support_])
     
 if __name__ == "__main__":
-    #simple_train()
-    #random_forest_train()
-    #feature_selection()
+    # simple_train()
+    # random_forest_train()
+    # feature_selection()
     keras_train()
