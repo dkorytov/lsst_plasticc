@@ -132,6 +132,13 @@ def get_processed_data(location):
 
     return given_data
 
+def rescale_by_column(data):
+    # col_mean = np.mean(data, axis=1)
+    col_min = np.min(data, axis=1)
+    data -= col_min[:,None]
+    col_max = np.max(data, axis=1)
+    data /= col_max[:,None]
+    return data
 
 def get_train_test_data(data):
     train, test = sklearn.model_selection.train_test_split(data)
@@ -140,7 +147,11 @@ def get_train_test_data(data):
     x_test = np.array(test.drop(columns=['target', 'object_id', 'hostgal_specz']))
     y_test_true = test['target']
 
-    rescale_by_column(np.vstack([x_train, x_test]))
+
+    ## Rescaling the data by column
+    rescaled_data = rescale_by_column(np.vstack([x_train, x_test]))
+    x_train = rescaled_data[: np.shape(y_train)[0],:]
+    x_test = rescaled_data[np.shape(y_train)[0]:,:]
 
     return x_train, y_train, x_test, y_test_true
 
@@ -222,18 +233,6 @@ def relabel(labels, data):
         slct = data==label
         result[slct] = i
     return result
-    
-def rescale_by_column(data):
-    # col_mean = np.mean(data, axis=1)
-    col_min = np.min(data, axis=1)
-    data -= col_min[:,None]
-    col_max = np.max(data, axis=1)
-    data /= col_max[:,None]
-    return data
-
-
-
-
 
 def keras_train(location='data'):
     # data = get_processed_data(location=location)
@@ -260,7 +259,7 @@ def keras_train(location='data'):
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
-    batch_size = 4
+    batch_size = 2
     num_classes = len(target_names)
     epochs = 200
     
@@ -273,19 +272,18 @@ def keras_train(location='data'):
     model.add(Dense(512, activation='relu', input_shape=(input_shape[1],)))
     model.add(Dropout(0.2))
     model.add(Dense(256, activation='relu'))
-    # model.add(Dropout(0.2))
+    model.add(Dropout(0.2))
     model.add(Dense(128, activation='relu'))
-    # model.add(Dropout(0.2))
+    model.add(Dropout(0.2))
     model.add(Dense(64, activation='relu'))
-    # model.add(Dropout(0.2))
+    model.add(Dropout(0.2))
     model.add(Dense(32, activation='relu'))
-    # model.add(Dropout(0.2))
-
+    model.add(Dropout(0.2))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
-    learning_rate = 2.0
-    decay_rate = 0.5
+    learning_rate = 5.0
+    decay_rate = 1.0
     adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
