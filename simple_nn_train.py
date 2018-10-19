@@ -262,6 +262,8 @@ def ann_train(location='data'):
     batch_size = 4
     num_classes = len(target_names)
     epochs = 200
+    learning_rate = 5.0
+    decay_rate = 1.0
     
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
@@ -286,8 +288,7 @@ def ann_train(location='data'):
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
-    learning_rate = 5.0
-    decay_rate = 1.0
+
     adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -377,14 +378,17 @@ def rnn_train(location='data'):
     import keras
     from keras.datasets import mnist
     from keras.models import Sequential
-    from keras.layers import Dense, Dropout, Flatten, LSTM
+    from keras.layers import Dense, Dropout, Flatten, LSTM, Embedding
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
     batch_size = 4
     num_classes = len(target_names)
     epochs = 200
+    learning_rate = 5.0
+    decay_rate = 1.0
 
+    
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
 
@@ -393,10 +397,12 @@ def rnn_train(location='data'):
 
 
     model = Sequential()
-    model.add(LSTM(128, dropout=0.2, recurrent_dropout=0.2, input_shape=(input_shape[1], )))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dropout(0.2))
-    model.add(Dense(num_classes, activation='softmax'))
+    model.add(LSTM(256, input_shape=(input_shape[0], )))
+    model.add(LSTM(output_dim=256, activation='sigmoid', inner_activation='hard_sigmoid', return_sequences=True))
+    model.add(Dropout(0.5))
+    model.add(LSTM(output_dim=256, activation='sigmoid', inner_activation='hard_sigmoid'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
 
     model.summary()
 
