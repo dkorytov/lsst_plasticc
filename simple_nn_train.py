@@ -234,7 +234,7 @@ def relabel(labels, data):
         result[slct] = i
     return result
 
-def keras_train(location='data'):
+def ann_train(location='data'):
     # data = get_processed_data(location=location)
     # print(data.keys())
     # data.to_csv("data/data.csv")
@@ -259,7 +259,7 @@ def keras_train(location='data'):
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
-    batch_size = 2
+    batch_size = 4
     num_classes = len(target_names)
     epochs = 200
     
@@ -269,8 +269,12 @@ def keras_train(location='data'):
     input_shape = np.shape(x_train)
     print(input_shape)
     model = Sequential()
-    model.add(Dense(512, activation='relu', input_shape=(input_shape[1],)))
+    model.add(Dense(128, activation='relu', input_shape=(input_shape[1],)))
     model.add(Dropout(0.2))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(512, activation='relu'))
+    model.add(Dropout(0.4))
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.2))
     model.add(Dense(128, activation='relu'))
@@ -349,7 +353,117 @@ def keras_train(location='data'):
     plot_confusion_matrix(cnfs_mtx, target_names, normalize=True)
     plt.show()
 
-    
+
+
+
+def rnn_train(location='data'):
+    # data = get_processed_data(location=location)
+    # print(data.keys())
+    # data.to_csv("data/data.csv")
+    data = pd.read_csv("data/data.csv").drop(columns=['Unnamed: 0'])
+    print(data.keys())
+    # exit()
+    x_train, y_train, x_test, y_test_true = get_train_test_data(data)
+
+    # x_train = np.array(x_train)
+    # x_test = np.array(x_test)
+
+    # x_train, x_test = rescale_by_column( np.vstack([x_train, x_test]) )
+
+
+
+    target_names = np.sort(data['target'].unique())
+
+    import keras
+    from keras.datasets import mnist
+    from keras.models import Sequential
+    from keras.layers import Dense, Dropout, Flatten, LSTM
+    from keras.layers import Conv2D, MaxPooling2D
+    import keras.optimizers
+    from keras import backend as K
+    batch_size = 4
+    num_classes = len(target_names)
+    epochs = 200
+
+    y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
+    y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
+
+    input_shape = np.shape(x_train)
+    print(input_shape)
+
+
+    model = Sequential()
+    model.add(LSTM(128, dropout=0.2, recurrent_dropout=0.2, input_shape=(input_shape[1], )))
+    model.add(Dense(32, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(num_classes, activation='softmax'))
+
+    model.summary()
+
+    rmsprop = keras.optimizers.RMSprop(lr=learning_rate, decay=decay_rate)
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=rmsprop,
+                  metrics=['accuracy'])
+
+    print(x_train.shape, y_train.shape)
+
+    ModelFit = model.fit(x_train, y_train,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         verbose=2,
+                         validation_data=(x_test, y_test))
+
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+    train_loss = ModelFit.history['loss']
+    val_loss = ModelFit.history['val_loss']
+    train_acc = ModelFit.history['acc']
+    val_acc = ModelFit.history['val_acc']
+    epoch_array = range(1, epochs + 1)
+
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(7, 5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.02)
+    ax[0].plot(epoch_array, train_loss)
+    ax[0].plot(epoch_array, val_loss)
+    ax[0].set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[0].legend(['train_loss', 'val_loss'])
+
+    ax[1].plot(epoch_array, train_acc)
+    ax[1].plot(epoch_array, val_acc)
+    ax[1].set_ylabel('acc')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[1].legend(['train_acc', 'val_acc'])
+
+    train_loss = ModelFit.history['loss']
+    val_loss = ModelFit.history['val_loss']
+    epoch_array = range(1, epochs + 1)
+
+    fig, ax = plt.subplots(1, 1, sharex=True, figsize=(7, 5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.02)
+    ax.plot(epoch_array, train_loss)
+    ax.plot(epoch_array, val_loss)
+    ax.set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax.legend(['train_loss', 'val_loss'])
+
+    plt.show()
+
+    plt.figure(322)
+    y_test_pred = model.predict_classes(x_test)
+    cnfs_mtx = sklearn.metrics.confusion_matrix(relabel(target_names, y_test_true), y_test_pred)
+    plot_confusion_matrix(cnfs_mtx, target_names, normalize=True)
+    plt.show()
+
+
+
+
+
 def feature_selection(location='data'):
     data = get_processed_data(location=location)
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
@@ -364,4 +478,5 @@ if __name__ == "__main__":
     # simple_train()
     # random_forest_train()
     # feature_selection()
-    keras_train()
+    # ann_train()
+    rnn_train()
