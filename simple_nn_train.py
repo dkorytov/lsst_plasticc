@@ -382,10 +382,10 @@ def rnn_train(location='data'):
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
-    batch_size = 4
+    batch_size = 2
     num_classes = len(target_names)
-    epochs = 20
-    learning_rate = 1.0
+    epochs = 10
+    learning_rate = 5.0
     decay_rate = 0.1
 
 
@@ -401,20 +401,21 @@ def rnn_train(location='data'):
 
 
     model = Sequential()
-    model.add(LSTM(512, activation='sigmoid', input_shape= (input_shape[1], 1)))
-    # model.add(LSTM(128, activation='sigmoid', input_shape= (input_shape[1], 1) ) )
-    model.add(Dropout(0.5))
+    model.add(LSTM(64, activation='sigmoid', input_shape= (input_shape[1], 1)))
+    # model.add(Dropout(0.2))
+
     # model.add(LSTM(128, activation='sigmoid'))
-    # model.add(Dropout(0.5))
+    # model.add(Dropout(0.2))
 
-    model.add(Dense(256, activation='sigmoid'))
-    model.add(Dropout(0.2))
+    # model.add(Dense(128, activation='sigmoid'))
+    # model.add(Dropout(0.2))
 
-    model.add(Dense(128, activation='sigmoid'))
-    model.add(Dropout(0.2))
+    # model.add(Dense(64, activation='sigmoid'))
+    # model.add(Dropout(0.2))
 
-    model.add(Dense(64, activation='sigmoid'))
-    model.add(Dropout(0.2))
+    # model.add(Dense(32, activation='sigmoid'))
+    # model.add(Dropout(0.2))
+
     model.add(Dense(num_classes, activation='sigmoid'))
 
     model.summary()
