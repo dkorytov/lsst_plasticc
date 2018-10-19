@@ -384,25 +384,38 @@ def rnn_train(location='data'):
     from keras import backend as K
     batch_size = 4
     num_classes = len(target_names)
-    epochs = 200
-    learning_rate = 5.0
-    decay_rate = 1.0
+    epochs = 20
+    learning_rate = 1.0
+    decay_rate = 0.1
 
-    
+
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
+
 
     input_shape = np.shape(x_train)
     print(input_shape)
 
+    x_train = x_train.reshape(x_train.shape[0], x_train.shape[1], 1)
+    x_test = x_test.reshape(x_test.shape[0], x_test.shape[1], 1)
+
 
     model = Sequential()
-    model.add(LSTM(256, input_shape=(input_shape[0], )))
-    model.add(LSTM(output_dim=256, activation='sigmoid', inner_activation='hard_sigmoid', return_sequences=True))
+    model.add(LSTM(512, activation='sigmoid', input_shape= (input_shape[1], 1)))
+    # model.add(LSTM(128, activation='sigmoid', input_shape= (input_shape[1], 1) ) )
     model.add(Dropout(0.5))
-    model.add(LSTM(output_dim=256, activation='sigmoid', inner_activation='hard_sigmoid'))
-    model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))
+    # model.add(LSTM(128, activation='sigmoid'))
+    # model.add(Dropout(0.5))
+
+    model.add(Dense(256, activation='sigmoid'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(128, activation='sigmoid'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(64, activation='sigmoid'))
+    model.add(Dropout(0.2))
+    model.add(Dense(num_classes, activation='sigmoid'))
 
     model.summary()
 
