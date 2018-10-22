@@ -132,13 +132,27 @@ def get_processed_data(location):
 
     return given_data
 
+def rescale_by_column(data):
+    # col_mean = np.mean(data, axis=1)
+    col_min = np.min(data, axis=1)
+    data -= col_min[:,None]
+    col_max = np.max(data, axis=1)
+    data /= col_max[:,None]
+    return data
 
 def get_train_test_data(data):
     train, test = sklearn.model_selection.train_test_split(data)
-    x_train = train.drop(columns=['target', 'object_id', 'hostgal_specz'])
+    x_train = np.array(train.drop(columns=['target', 'object_id', 'hostgal_specz']))
     y_train = train['target']
-    x_test = test.drop(columns=['target', 'object_id', 'hostgal_specz'])
+    x_test = np.array(test.drop(columns=['target', 'object_id', 'hostgal_specz']))
     y_test_true = test['target']
+
+
+    ## Rescaling the data by column
+    rescaled_data = rescale_by_column(np.vstack([x_train, x_test]))
+    x_train = rescaled_data[: np.shape(y_train)[0],:]
+    x_test = rescaled_data[np.shape(y_train)[0]:,:]
+
     return x_train, y_train, x_test, y_test_true
 
 def simple_train(location = 'data'):
@@ -219,15 +233,23 @@ def relabel(labels, data):
         slct = data==label
         result[slct] = i
     return result
-    
-def keras_train(location='data'):
+
+def ann_train(location='data'):
     # data = get_processed_data(location=location)
     # print(data.keys())
     # data.to_csv("data/data.csv")
     data = pd.read_csv("data/data.csv").drop(columns=['Unnamed: 0'])
-    # print(data.keys())
+    print(data.keys())
     # exit()
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
+
+    # x_train = np.array(x_train)
+    # x_test = np.array(x_test)
+
+    # x_train, x_test = rescale_by_column( np.vstack([x_train, x_test]) )
+
+
+
     target_names = np.sort(data['target'].unique())
 
     import keras
@@ -237,9 +259,11 @@ def keras_train(location='data'):
     from keras.layers import Conv2D, MaxPooling2D
     import keras.optimizers
     from keras import backend as K
-    batch_size = 128
+    batch_size = 4
     num_classes = len(target_names)
     epochs = 200
+    learning_rate = 5.0
+    decay_rate = 1.0
     
     y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
     y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
@@ -247,23 +271,24 @@ def keras_train(location='data'):
     input_shape = np.shape(x_train)
     print(input_shape)
     model = Sequential()
-    odel = Sequential()
-    model.add(Dense(256, activation='relu', input_shape=(40,)))
+    model.add(Dense(128, activation='relu', input_shape=(input_shape[1],)))
     model.add(Dropout(0.2))
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.2))
+    model.add(Dense(512, activation='relu'))
+    model.add(Dropout(0.4))
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.2))
-    model.add(Dense(256, activation='relu'))
+    model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.2))
-    model.add(Dense(256, activation='relu'))
+    model.add(Dense(64, activation='relu'))
     model.add(Dropout(0.2))
-
+    model.add(Dense(32, activation='relu'))
+    model.add(Dropout(0.2))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.summary()
-    learning_rate = 1.0
-    decay_rate = 0.01
+
     adaDelta = keras.optimizers.Adadelta(lr=learning_rate, decay=decay_rate)
     
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -274,8 +299,10 @@ def keras_train(location='data'):
     ModelFit = model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
-              verbose=1,
+              verbose=2,
               validation_data=(x_test, y_test))
+
+
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
@@ -318,7 +345,145 @@ def keras_train(location='data'):
     ax.legend(['train_loss','val_loss'])
 
     plt.show()
-    
+
+
+
+    plt.figure(322)
+    y_test_pred = model.predict_classes(x_test)
+    cnfs_mtx = sklearn.metrics.confusion_matrix(relabel(target_names, y_test_true), y_test_pred)
+    plot_confusion_matrix(cnfs_mtx, target_names, normalize=True)
+    plt.show()
+
+
+
+
+def rnn_train(location='data'):
+    # data = get_processed_data(location=location)
+    # print(data.keys())
+    # data.to_csv("data/data.csv")
+    data = pd.read_csv("data/data.csv").drop(columns=['Unnamed: 0'])
+    print(data.keys())
+    # exit()
+    x_train, y_train, x_test, y_test_true = get_train_test_data(data)
+
+    # x_train = np.array(x_train)
+    # x_test = np.array(x_test)
+
+    # x_train, x_test = rescale_by_column( np.vstack([x_train, x_test]) )
+
+
+
+    target_names = np.sort(data['target'].unique())
+
+    import keras
+    from keras.datasets import mnist
+    from keras.models import Sequential
+    from keras.layers import Dense, Dropout, Flatten, LSTM, Embedding
+    from keras.layers import Conv2D, MaxPooling2D
+    import keras.optimizers
+    from keras import backend as K
+    batch_size = 2
+    num_classes = len(target_names)
+    epochs = 10
+    learning_rate = 5.0
+    decay_rate = 0.1
+
+
+    y_train = keras.utils.to_categorical(relabel(target_names, y_train), num_classes)
+    y_test = keras.utils.to_categorical(relabel(target_names, y_test_true), num_classes)
+
+
+    input_shape = np.shape(x_train)
+    print(input_shape)
+
+    x_train = x_train.reshape(x_train.shape[0], x_train.shape[1], 1)
+    x_test = x_test.reshape(x_test.shape[0], x_test.shape[1], 1)
+
+
+    model = Sequential()
+    model.add(LSTM(64, activation='sigmoid', input_shape= (input_shape[1], 1)))
+    # model.add(Dropout(0.2))
+
+    # model.add(LSTM(128, activation='sigmoid'))
+    # model.add(Dropout(0.2))
+
+    # model.add(Dense(128, activation='sigmoid'))
+    # model.add(Dropout(0.2))
+
+    # model.add(Dense(64, activation='sigmoid'))
+    # model.add(Dropout(0.2))
+
+    # model.add(Dense(32, activation='sigmoid'))
+    # model.add(Dropout(0.2))
+
+    model.add(Dense(num_classes, activation='sigmoid'))
+
+    model.summary()
+
+    rmsprop = keras.optimizers.RMSprop(lr=learning_rate, decay=decay_rate)
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=rmsprop,
+                  metrics=['accuracy'])
+
+    print(x_train.shape, y_train.shape)
+
+    ModelFit = model.fit(x_train, y_train,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         verbose=2,
+                         validation_data=(x_test, y_test))
+
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+    train_loss = ModelFit.history['loss']
+    val_loss = ModelFit.history['val_loss']
+    train_acc = ModelFit.history['acc']
+    val_acc = ModelFit.history['val_acc']
+    epoch_array = range(1, epochs + 1)
+
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(7, 5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.02)
+    ax[0].plot(epoch_array, train_loss)
+    ax[0].plot(epoch_array, val_loss)
+    ax[0].set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[0].legend(['train_loss', 'val_loss'])
+
+    ax[1].plot(epoch_array, train_acc)
+    ax[1].plot(epoch_array, val_acc)
+    ax[1].set_ylabel('acc')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax[1].legend(['train_acc', 'val_acc'])
+
+    train_loss = ModelFit.history['loss']
+    val_loss = ModelFit.history['val_loss']
+    epoch_array = range(1, epochs + 1)
+
+    fig, ax = plt.subplots(1, 1, sharex=True, figsize=(7, 5))
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.02)
+    ax.plot(epoch_array, train_loss)
+    ax.plot(epoch_array, val_loss)
+    ax.set_ylabel('loss')
+    # ax[0].set_ylim([0,1])
+    # ax[0].set_title('Loss')
+    ax.legend(['train_loss', 'val_loss'])
+
+    plt.show()
+
+    plt.figure(322)
+    y_test_pred = model.predict_classes(x_test)
+    cnfs_mtx = sklearn.metrics.confusion_matrix(relabel(target_names, y_test_true), y_test_pred)
+    plot_confusion_matrix(cnfs_mtx, target_names, normalize=True)
+    plt.show()
+
+
+
+
+
 def feature_selection(location='data'):
     data = get_processed_data(location=location)
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
@@ -330,7 +495,8 @@ def feature_selection(location='data'):
     print('Best features :', x_train.columns[rfecv.support_])
     
 if __name__ == "__main__":
-    #simple_train()
-    #random_forest_train()
-    #feature_selection()
-    keras_train()
+    # simple_train()
+    # random_forest_train()
+    # feature_selection()
+    # ann_train()
+    rnn_train()
