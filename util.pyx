@@ -167,7 +167,11 @@ class TimeSeriesReader:
             result_dict = {}
             column_major = np.transpose(self.line_buffer)
             for i, (name, dtype) in enumerate(zip(self.header_line, self.header_dtypes)):
-                result_dict[name] = np.array(column_major[i], dtype=dtype)
+                if number_read != 0:
+                    a = np.array(column_major[i], dtype=dtype)	
+                else:
+                    a = np.array([], dtype=dtype)
+                result_dict[name] = a
             self.line_buffer = [next_read_line]
             if return_format =="dict":
                 return result_dict

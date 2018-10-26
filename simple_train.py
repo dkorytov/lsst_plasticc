@@ -101,7 +101,16 @@ def get_processed_data(location):
     ldf_dt_mean= lambda g: df_dt_mean(g, train_ts, g.index)
         
     print("\n\nFor each group (id + passband), we will calculate the mean, the maximum/minimum flux above the mean, and standard deviation of the time series\n")
-    train_ts_agg = train_grouped.agg({'flux':{'time_seen': ltime_seen, 'df_dt_min': ldf_dt_min, 'df_dt_max': ldf_dt_max, 'df_dt_mean': ldf_dt_mean, 'mean': np.mean, 'max_above': max_above_mean, 'min_below': min_below_mean, 'frac_max': frac_max_flux, 'frac_min': frac_min_flux }, 'detected':{'detected_frac': np.average}}).reset_index()
+    train_ts_agg = train_grouped.agg({'flux':{'time_seen': ltime_seen,
+                                              'df_dt_min': ldf_dt_min,
+                                              'df_dt_max': ldf_dt_max,
+                                              'df_dt_mean':ldf_dt_mean,
+                                              'mean': np.mean,
+                                              'max_above': max_above_mean,
+                                              'min_below': min_below_mean,
+                                              'frac_max': frac_max_flux,
+                                              'frac_min': frac_min_flux },
+                                      'detected':{'detected_frac': np.average}}).reset_index()
 
     print("column names:", train_ts_agg.keys())
 

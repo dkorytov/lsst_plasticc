@@ -24,7 +24,36 @@ def band_min(dict_ts, band):
 def band_median(dict_ts, band):
     slct = dict_ts['passband'] == band
     return np.median(dict_ts['flux'][slct])
-    
+
+def band_max_median(dict_ts, band):
+    slct = dict_ts['passband'] == band
+    median = np.median(dict_ts['flux'][slct])
+    max_v = np.max(dict_ts['flux'][slct])
+    return max_v-median
+
+def band_min_median(dict_ts, band):
+    slct = dict_ts['passband'] == band
+    median = np.median(dict_ts['flux'][slct])
+    min_v = np.min(dict_ts['flux'][slct])
+    return median-min_v
+
+def band_time_seen(dict_ts, band):
+    slct1 = dict_ts['passband'] == band
+    slct2 = dict_ts['detected'] == 1
+    time = dict_ts['mjd'][slct1 & slct2]
+    if time.size ==0:
+        return np.max(dict_ts['mjd']) - np.min(dict_ts['mjd'])
+    else:
+        return np.max(time) - np.min(time)
+
+def band_std(dict_ts, band):
+    slct = dict_ts['passband'] == band
+    return np.std(dict_ts['flux'])
+
+def frac_detected(dict_ts):
+    return np.sum(dict_ts['detected'])/dict_ts['detected'].size
+
+
 
 def get_summary_statistic_function_dict():
     """ This method returns a dict of functions that compute 
@@ -34,17 +63,17 @@ def get_summary_statistic_function_dict():
     """
     return_dict = {}
     bands = [0,1,2,3,4,5]
-    band_functions = {}
-    band_functions['max'] = band_max
-    band_functions['min'] = band_min
-    band_functions['mean'] = band_mean
-    band_functions['median'] = band_median
-    band_functions['max'] = band_mean
+    band_functions = {'min': band_min,
+                      'max': band_max,
+                      'median': band_median,
+                      'max_med': band_max_median,
+                      'min_med': band_min_median,
+                      'std': band_std,
+                      'timeseen': band_time_seen,}
     for band in bands:
         for band_funct_name in band_functions.keys():
             funct = band_functions[band_funct_name]
-            band_funct = lambda dict_ts: funct(dict_ts, band)
-            return_dict["{}_{}".format(band_funct_name, band)]= band_funct
+            return_dict["{}_{}".format(band_funct_name, band)]= lambda dict_ts, funct=funct, band=band: funct(dict_ts, band)
     return return_dict
 
     
@@ -80,7 +109,8 @@ def create_summary_statistics_individual(dict_time_series, functions, output_dic
 
     """
     for func_name in functions.keys():
-        output_dict[func_name].append(functions[func_name](dict_time_series))
+        val = functions[func_name](dict_time_series)
+        output_dict[func_name].append(val)
     return
 
 def select_obj_id(dict_time_series, obj_id):
