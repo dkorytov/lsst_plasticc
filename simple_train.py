@@ -221,6 +221,7 @@ def random_forest_train(location = 'data'):
 
     plt.show()
 
+    
 def feature_selection(location='data'):
     data = get_processed_data(location=location)
     x_train, y_train, x_test, y_test_true = get_train_test_data(data)
@@ -230,6 +231,7 @@ def feature_selection(location='data'):
     rfecv = rfecv.fit(x_train, y_train)
     print('Optimal number of features :', rfecv.n_features_)
     print('Best features :', x_train.columns[rfecv.support_])
+
     
 if __name__ == "__main__":
     #simple_train()

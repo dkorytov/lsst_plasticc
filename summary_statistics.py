@@ -53,6 +53,31 @@ def band_std(dict_ts, band):
 def frac_detected(dict_ts):
     return np.sum(dict_ts['detected'])/dict_ts['detected'].size
 
+def flux_std(dict_ts):
+    return np.std(dict_ts['flux'])
+
+def flux_max(dict_ts):
+    return np.max(dict_ts['flux'])
+
+def flux_min(dict_ts):
+    return np.min(dict_ts['flux'])
+
+def flux_mean(dict_ts):
+    return np.mean(dict_ts['flux'])
+
+def flux_median(dict_ts):
+    return np.median(dict_ts['flux'])
+
+def flux_skew(dict_ts):
+    return np.median(dict_ts['flux']) - np.mean(dict_ts['flux'])
+
+def time_seen(dict_ts):
+    slct = dict_ts['detected'] == 1
+    time = dict_ts['mjd'][slct]
+    if time.size ==0:
+        return np.max(dict_ts['mjd']) - np.min(dict_ts['mjd'])
+    else:
+        return np.max(time) - np.min(time)
 
 
 def get_summary_statistic_function_dict():
@@ -62,18 +87,27 @@ def get_summary_statistic_function_dict():
     :return: a python dict containing time series summary functions 
     """
     return_dict = {}
-    bands = [0,1,2,3,4,5]
-    band_functions = {'min': band_min,
-                      'max': band_max,
-                      'median': band_median,
-                      'max_med': band_max_median,
-                      'min_med': band_min_median,
-                      'std': band_std,
-                      'timeseen': band_time_seen,}
-    for band in bands:
-        for band_funct_name in band_functions.keys():
-            funct = band_functions[band_funct_name]
-            return_dict["{}_{}".format(band_funct_name, band)]= lambda dict_ts, funct=funct, band=band: funct(dict_ts, band)
+    # bands = [0,1,2,3,4,5]
+    # band_functions = {'min': band_min,
+    #                   'max': band_max,
+    #                   'median': band_median,
+    #                   'max_med': band_max_median,
+    #                   'min_med': band_min_median,
+    #                   'std': band_std,
+    #                   'timeseen': band_time_seen,}
+    # for band in bands:
+    #     for band_funct_name in band_functions.keys():
+    #         funct = band_functions[band_funct_name]
+    #         return_dict["{}_{}".format(band_funct_name, band)]= lambda dict_ts, funct=funct, band=band: funct(dict_ts, band)
+    # return_dict['frac_detected']=frac_detected
+    return_dict = {'std':  flux_std,
+                   'max':  flux_max,
+                   'min':  flux_min,
+                   'mean': flux_mean,
+                   'skew': flux_skew,
+                   'detect': frac_detected,
+                   'time_seen': time_seen,
+                   }
     return return_dict
 
     

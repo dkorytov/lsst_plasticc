@@ -17,6 +17,8 @@ import sklearn.metrics
 import sklearn.ensemble
 import sklearn.feature_selection
 
+from xgboost import XGBClassifier
+
 import StringIO
 import csv
 import time
@@ -53,7 +55,8 @@ def create_decision_forest(model_fname="models/decision_tree.pckl"):
     x_train = model_df.drop(columns=['target', 'object_id'])
     y_train = model_df['target']
     
-    clf_df =  sklearn.ensemble.RandomForestClassifier(n_estimators=100, random_state=0)
+    # clf_df =  sklearn.ensemble.RandomForestClassifier(n_estimators=100, random_state=0)
+    clf_df = XGBClassifier()
     clf_df.fit(x_train, y_train)
     if(check_classifier):
         y_test_pred = clf_df.predict(x_test)
